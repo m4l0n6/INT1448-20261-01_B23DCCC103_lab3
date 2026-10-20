@@ -1,0 +1,58 @@
+openapi: 3.0.3
+info:
+  title: Bank Gateway (mock)
+  version: 1.0.0
+servers:
+  - url: http://localhost:4002
+paths:
+  /charges:
+    post:
+      summary: Trừ tiền
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Gửi lại cùng khóa thì trả giao dịch cũ, không trừ thêm
+          schema: { type: string, example: P1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reference, amount]
+              properties:
+                reference: { type: string, example: P1 }
+                amount: { type: integer, example: 100000 }
+      responses:
+        '201':
+          description: Đã trừ tiền
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Charge' }
+        '400': { description: Số tiền không hợp lệ }
+        '402': { description: Vượt hạn mức 20.000.000đ }
+        '500': { description: Lỗi tạm thời (xảy ra trước khi trừ tiền) }
+  /stats:
+    get:
+      summary: Thống kê
+      responses:
+        '200':
+          description: Số liệu
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connections: { type: integer }
+                  requests: { type: integer }
+                  charges: { type: integer }
+                  duplicates: { type: integer, description: Phải luôn bằng 0 }
+components:
+  schemas:
+    Charge:
+      type: object
+      properties:
+        chargeId: { type: string, example: C1 }
+        reference: { type: string, example: P1 }
+        amount: { type: integer, example: 100000 }

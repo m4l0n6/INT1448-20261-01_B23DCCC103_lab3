@@ -1,0 +1,74 @@
+openapi: 3.0.3
+info:
+  title: Fee Service API
+  version: 1.0.0
+  description: Thanh toán học phí trực tuyến, gọi sang cổng ngân hàng.
+servers:
+  - url: http://localhost:4001
+paths:
+  /students/{id}/fees:
+    get:
+      summary: Xem công nợ
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, example: 1 } }
+      responses:
+        '200':
+          description: Công nợ hiện tại
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  studentId: { type: integer }
+                  debt: { type: integer, example: 50000000 }
+        '404': { description: Không tìm thấy sinh viên }
+  /students/{id}/payments:
+    post:
+      summary: Thanh toán học phí
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, example: 1 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: integer, example: 100000 }
+      responses:
+        '201':
+          description: PAID - ngân hàng xác nhận đã trừ tiền
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentResult' }
+        '400': { description: Số tiền không hợp lệ hoặc vượt công nợ }
+        '402':
+          description: FAILED - ngân hàng từ chối (vượt hạn mức)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentError' }
+        '503':
+          description: FAILED - chắc chắn chưa trừ tiền (không kết nối được ngân hàng)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentError' }
+        '504':
+          description: PENDING - không biết đã trừ tiền hay chưa (timeout / đứt kết nối)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentError' }
+components:
+  schemas:
+    PaymentResult:
+      type: object
+      properties:
+        paymentId: { type: string, example: P1 }
+        status: { type: string, enum: [PAID] }
+        chargeId: { type: string, example: C1 }
+    PaymentError:
+      type: object
+      properties:
+        error: { type: string }
+        paymentId: { type: string, example: P1 }
+        status: { type: string, enum: [FAILED, PENDING] }
